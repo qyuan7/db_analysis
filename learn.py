@@ -39,7 +39,7 @@ def grid_GBR(X, Y, params, n_fold):
 
     """
     gdb_regressor = GradientBoostingRegressor()
-    clf = GridSearchCV(gdb_regressor, params, scoring = 'mean_squared_error', cv=n_fold)
+    clf = GridSearchCV(gdb_regressor, params, scoring = 'neg_mean_squared_error', cv=n_fold)
     clf.fit(X, Y)
     return clf.best_estimator_, clf.best_params_
 
@@ -55,7 +55,7 @@ def main():
     train_id, test_id, y_train, y_test = train_test_split(compound_array,gaps_array,test_size=0.20,random_state=0)
     train_fps = get_fp_from_id(compounds,fps_morgan,train_id)
     test_fps = get_fp_from_id(compounds,fps_morgan,test_id)
-    params = {'learning_rate': [0.01, 0.03, 0.05], 'n_estimators': [300, 500, 700], 'max_depth': [3, 4, 5]}
+    params = {'learning_rate': [0.01, 0.03, 0.05,0.1], 'n_estimators': [100,300, 500, 700], 'max_depth': [3, 4, 5]}
     gbr_regressor, gbr_cv_params = grid_GBR(train_fps, y_train,params,4)
     y_pred_train = gbr_regressor.predict(train_fps)
     y_pred_test = gbr_regressor.predict(test_fps)
