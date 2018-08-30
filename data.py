@@ -36,11 +36,9 @@ def get_data(query_result):
     Returns: lists of smiles, compound uIDs and parameters
 
     """
-    smiles = []; compounds = []; gaps = []
-    for item in query_result:
-        smiles.append(item[1].rstrip())
-        compounds.append(item[2])
-        gaps.append(item[-1])
+    smiles = [item[1].rstrip() for item in query_result]
+    compounds = [item[2] for item in query_result]
+    gaps = [item[-1] for item in query_result]
     return smiles, compounds, gaps
 
 
@@ -53,9 +51,7 @@ def get_mols(smiles):
     Returns: list of mols for the candidate molecules
 
     """
-    mols = []
-    for smile in smiles:
-        mols.append(Chem.MolFromSmiles(smile))
+    mols = [Chem.MolFromSmiles(smile) for smile in smiles]
     return mols
 
 
