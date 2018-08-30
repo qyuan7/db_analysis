@@ -36,7 +36,7 @@ def grid_GBR(X, Y, params, n_fold):
 
     """
     gdb_regressor = GradientBoostingRegressor()
-    clf = GridSearchCV(gdb_regressor, params, scoring='neg_mean_squared_error', cv=n_fold)
+    clf = GridSearchCV(gdb_regressor, params, scoring='neg_mean_squared_error', cv=n_fold, n_jobs=-1)
     clf.fit(X, Y)
     return clf.best_estimator_, clf.best_params_
 
