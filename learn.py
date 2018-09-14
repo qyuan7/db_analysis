@@ -42,7 +42,7 @@ def grid_GBR(X, Y, params, n_fold):
 
 
 def main():
-    qresult = connect_db('solar.db','KS_gap')
+    qresult = connect_db('solar.db', 'KS_gap')
     smiles, compounds, gaps = get_data(qresult)
     mols = get_mols(smiles)
     fps_morgan, failed_mols = get_fingerprints(mols)

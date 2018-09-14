@@ -5,7 +5,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 
 
-def connect_db(db_file,parameter):
+def connect_db(db_file, parameter):
     """
     Execute SQL query to obtain molecules and parameters
     Args:
@@ -74,7 +74,7 @@ def get_fingerprints(mols):
     return fps_morgan, failed_mols
 
 
-def refine_compounds(compounds,mols,gaps,failed_mols):
+def refine_compounds(compounds, mols, gaps, failed_mols):
     """
     Remove molecules with which reasonable mols cannot be generated
     Args:
