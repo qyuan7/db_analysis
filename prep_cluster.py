@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 from data import *
-import os
-import glob
-import pandas as pd
-import numpy as np
-from rdkit.Chem import AllChem
-from rdkit.Chem import rdMolDescriptors
 from rdkit import Chem, DataStructs
 
 """
