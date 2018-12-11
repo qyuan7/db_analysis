@@ -40,7 +40,7 @@ for i in [1024, 2048, 4096, 8192, 16384, 32768]:
     gen_list = gen_df[0].tolist()
     over, num, smi_list = get_smi_list_overlap(ori_list, gen_list)
     smi_df = pd.Series(data=smi_list, name='SMILES').to_frame()
-    smi_df.loc[:,'Groou'] = i
+    smi_df.loc[:,'Group'] = i
     frames.append(smi_df)
     total_over.append(over)
     total_num.append(num)
