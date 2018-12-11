@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from copy import deepcopy
 from rdkit import Chem
-import matplotlib.pyplot as plot
+from data import *
+from sklearn.externals import joblib
 
 
 def get_smi_list_overlap(large, small):
@@ -30,21 +31,54 @@ def get_smi_list_overlap(large, small):
     return len(overlap), len(small_copy), small_copy
 
 
-total_over, total_num = [], []
-total_unique_list = []
-ori_df = pd.read_csv('./sampled_da_info/refined_smii.csv',header=None)
-ori_list = ori_df[0].tolist()
-frames = []
-for i in [1024, 2048, 4096, 8192, 16384, 32768]:
-    gen_df = pd.read_csv('./sampled_da_info/sampled_da'+str(i)+'_smi.csv', header=None)
-    gen_list = gen_df[0].tolist()
-    over, num, smi_list = get_smi_list_overlap(ori_list, gen_list)
-    smi_df = pd.Series(data=smi_list, name='SMILES').to_frame()
-    smi_df.loc[:,'Group'] = i
-    frames.append(smi_df)
-    total_over.append(over)
-    total_num.append(num)
-    total_unique_list.extend([smi_list])
+def predict_property(model_file, fps):
+    """
+    Function to predict the properties of generated molecules
+    Args:
+        model_file: File containing pre-trained ML model for prediction
+        fps: list of molecular fingerprints
 
-unique_df = pd.concat(frames)
-unique_df.to_csv('unique_sampled_smiles.csv', index=False)
+    Returns: list of predicted valued
+
+    """
+    model = joblib.load(model_file)
+    return model.predict(fps)
+
+
+def main():
+    #total_over, total_num = [], []
+    #total_unique_list = []
+    ori_df = pd.read_csv('./sampled_da_info/refined_smii.csv',header=None)
+    ori_list = ori_df[0].tolist()
+    frames = []
+    for i in [1024, 2048, 4096, 8192, 16384, 32768]:
+        gen_df = pd.read_csv('./sampled_da_info/sampled_da'+str(i)+'_smi.csv', header=None)
+        gen_list = gen_df[0].tolist()
+        over, num, smi_list = get_smi_list_overlap(ori_list, gen_list)
+        smi_df = pd.Series(data=smi_list, name='SMILES').to_frame()
+        smi_df.loc[:,'Group'] = i
+        frames.append(smi_df)
+    #    total_over.append(over)
+    #    total_num.append(num)
+    #    total_unique_list.extend([smi_list])
+
+    unique_df = pd.concat(frames)
+    gen_smi = unique_df['SMILES'].tolist()
+    gen_mols = get_mols(gen_smi)
+    gen_fps, _ = get_fingerprints(gen_mols)
+    gen_gaps = predict_property('gbdt_regessor_gap.joblib', gen_fps)
+    gen_dips = predict_property('gbdt_regessor_dip.joblib', gen_fps)
+    gaps_series = pd.Series(data=gen_gaps)
+    dip_series = pd.Series(data=gen_dips)
+    unique_df.loc[:, 'Gap'] = gaps_series
+    unique_df.loc[:, 'Dip'] = dip_series
+    unique_df.to_csv('unique_sampled_smiles.csv', index=False)
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
