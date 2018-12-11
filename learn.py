@@ -1,11 +1,19 @@
 #!/usr/bin/env python
-#noinspection PyUnresolvedReferences
+import os
+os.environ["MKL_NUM_THREADS"] = "1" 
+os.environ["NUMEXPR_NUM_THREADS"] = "1" 
+os.environ["OMP_NUM_THREADS"] = "1"
 import pandas as pd
 import numpy as np
 from data import *
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.externals import joblib
+import os.path
+import torch
+#import warning
+#warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 
 def get_fp_from_id(all_ids, all_fps, id_list):
@@ -36,13 +44,13 @@ def grid_GBR(X, Y, params, n_fold):
 
     """
     gdb_regressor = GradientBoostingRegressor()
-    clf = GridSearchCV(gdb_regressor, params, scoring='neg_mean_squared_error', cv=n_fold, n_jobs=-1)
+    clf = GridSearchCV(gdb_regressor, params, scoring='neg_mean_squared_error', cv=n_fold, n_jobs=16)
     clf.fit(X, Y)
     return clf.best_estimator_, clf.best_params_
 
 
 def main():
-    qresult = connect_db('solar.db', 'KS_gap')
+    qresult = connect_db('solar.db', 'dip')
     smiles, compounds, gaps = get_data(qresult)
     mols = get_mols(smiles)
     fps_morgan, failed_mols = get_fingerprints(mols)
@@ -58,8 +66,28 @@ def main():
     y_pred_test = gbr_regressor.predict(test_fps)
     train_err = mean_squared_error(y_train,y_pred_train)
     test_err = mean_squared_error(y_test, y_pred_test)
-    print('MSE on training set is {}\nMSE on test set is {}'.format(train_err,test_err))
-
+    #print('MSE on training set is {}\nMSE on test set is {}'.format(train_err,test_err))
+    train_db = pd.DataFrame()
+    train_db['id'] = pd.Series(train_id)
+    train_db['dip_exp'] = pd.Series(y_train)
+    train_db['dip_gdbt'] = pd.Series(y_pred_train)
+    test_db = pd.DataFrame()
+    test_db['id'] = pd.Series(test_id)
+    test_db['dip_exp'] = pd.Series(y_test)
+    test_db['dip_gdbt'] = pd.Series(y_pred_test)
+    frames = [train_db, test_db]
+    result_db = pd.concat(frames)
+    save_path = '/work/qyuan/db_analysis'
+    file_name = 'gbdt_dip2.csv'
+    full_name = os.path.join(save_path, file_name)
+    result_db.to_csv(full_name, index=False)
+    model = 'gbdt_regessor_dip2.joblib'
+    model_name = os.path.join(save_path, model)
+    joblib.dump(gbr_regressor, model_name)
+    #output = open(full_name, 'w')
+    #output.write('training error: {}'.format(train_err))
+    #output.write('test error: {}'.format(test_err))
+    #output.close()
 
 if __name__ == '__main__':
     main()
