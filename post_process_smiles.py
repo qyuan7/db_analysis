@@ -4,6 +4,10 @@ from copy import deepcopy
 from rdkit import Chem
 from data import *
 from sklearn.externals import joblib
+from sklearn.manifold import TSNE
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plot
 
 
 def get_smi_list_overlap(large, small):
@@ -45,9 +49,15 @@ def predict_property(model_file, fps):
     return model.predict(fps)
 
 
-def main():
-    #total_over, total_num = [], []
-    #total_unique_list = []
+
+def save_predict_results():
+    """
+    Predict the gap and dip of generated SMILES from files and save the results
+    Also save the generated with gap < 2, dip <2 as promising candidates
+    Returns:
+
+    """
+
     ori_df = pd.read_csv('./sampled_da_info/refined_smii.csv',header=None)
     ori_list = ori_df[0].tolist()
     frames = []
@@ -64,33 +74,57 @@ def main():
         smi_df = pd.Series(data=smi_list, name='SMILES').to_frame()
         smi_df.loc[:,'Group'] = i
         frames.append(smi_df)
-    #    total_over.append(over)
-    #    total_num.append(num)
-    #    total_unique_list.extend([smi_list])
 
     unique_df = pd.concat(frames)
-    print(len(unique_df))
     gen_smi = unique_df['SMILES'].tolist()
-    #for idx in sorted(failed_mols, reverse=True):
-    #    del gen_smi[idx]
-    #    del gen_mols[idx]
     gen_mols = get_mols(gen_smi)
     gen_fps, _ = get_fingerprints(gen_mols)
-    print(len(gen_fps))
     unique_df['Gaps'] = predict_property('gbdt_regessor_gap.joblib', gen_fps)
     unique_df['Dips'] = predict_property('gbdt_regessor_dip.joblib', gen_fps)
-    #gaps_series = pd.Series(data=gen_gaps)
-    #dip_series = pd.Series(data=gen_dips)
+    promising_df = unique_df.loc[(unique_df['Gaps'] <= 2.0) & (unique_df['Dips']<=2.0)]
+    unique_df.to_csv('unique_sampled_smiles_corr2.csv', index=False)
+    promising_df.to_csv('Gen_promisings.csv', index=False)
 
-    #unique_df.loc[:, 'Gap'] = gaps_series
-    #unique_df.loc[:, 'Dip'] = dip_series
-    unique_df.to_csv('unique_sampled_smiles_corr.csv', index=False)
+
+def tsne_projection(train_file, gen_file):
+    """
+    Creat tsne projection of the fps of the generated promising smiles and the smiles for transfer training.
+    Returns: plot of the tsne result
+
+    """
+    train_smiles = pd.read_csv(train_file, header=None)
+    train_smiles['label'] = 'train'
+    gen_prom_smiles = pd.read_csv(gen_file)
+    gen_prom_smiles = gen_prom_smiles.drop(['Group', 'Gaps', 'Dips'], axis=1)
+    gen_prom_smiles['label'] = 'gen'
+    train_smiles.rename(columns={0: "SMILES"}, inplace=True)
+    all_smiles = pd.concat([train_smiles, gen_prom_smiles])
+    mols = get_mols(all_smiles.SMILES)
+    fps, _ = get_fingerprints(mols)
+    fp_embeded = TSNE(n_components=2).fit_transform(fps)
+    return fp_embeded, len(train_smiles)
+
+
+def plot_tsne(fps, num_train):
+    fig, ax = plot.subplots()
+    ax.scatter(fps[:num_train,0], fps[:num_train,1],
+               c='blue', s=90,edgecolors='black', linewidths=0.4, label='train')
+    ax.scatter(fps[num_train:,0], fps[num_train:,1],
+               c='greenyellow', s=90, edgecolors='black', linewidths=0.4, label='generated')
+    ax.grid(True)
+    ax.axis([-70, 70, -70, 70])
+    ax.legend(loc='best',frameon=False, prop={'size':20})
+    return ax
+
+def main():
+    save_predict_results()
+    fp_embeded, num = tsne_projection('refined_smii.csv', 'Gen_promisings.csv')
+    ax = plot_tsne(fp_embeded, num_train=num)
+    plot.savefig('tsne_plot.png', dpi=300)
 
 
 if __name__ == '__main__':
     main()
-
-
 
 
 
